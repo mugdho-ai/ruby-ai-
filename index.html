@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ruby Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #1f2937;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      .main-container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+      .sidebar {
+        width: 240px;
+        background-color: #111827;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        border-right: 1px solid #374151;
+        transition: all 0.3s ease;
+      }
+      .sidebar.hidden {
+        display: none;
+      }
+      .toggle-btn {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: #ec4899;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        z-index: 10;
+      }
+      .header-center {
+        text-align: center;
+        width: 100%;
+        margin-top: 10px;
+        font-size: 24px;
+        color: #ec4899;
+        font-weight: bold;
+      }
+      .sidebar button {
+        background: none;
+        border: none;
+        color: white;
+        text-align: left;
+        padding: 10px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+      .sidebar button:hover {
+        background-color: #374151;
+      }
+      .chat-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+      .chat-box {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+      }
+      .message {
+        background-color: #374151;
+        margin: 10px 0;
+        padding: 10px 15px;
+        border-radius: 8px;
+        max-width: 90%;
+        word-wrap: break-word;
+      }
+      .message.user {
+        background-color: #ec4899;
+        align-self: flex-end;
+      }
+      .input-box {
+        display: flex;
+        gap: 10px;
+        padding: 15px;
+        border-top: 1px solid #374151;
+      }
+      .input-box input {
+        flex: 1;
+        padding: 10px;
+        border-radius: 5px;
+        border: none;
+        outline: none;
+      }
+      .input-box button {
+        padding: 10px;
+        border: none;
+        background-color: #ec4899;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      #settingsMenu {
+        display: none;
+        position: absolute;
+        top: 70px;
+        left: 10px;
+        right: 10px;
+        background: #1f2937;
+        border: 1px solid #374151;
+        padding: 20px;
+        border-radius: 8px;
+        z-index: 20;
+      }
+      .message pre {
+        background: #272c34;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+        color: #d6deeb;
+        font-family: "Courier New", Courier, monospace;
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
+      .message code {
+        background: #272c34;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-family: "Courier New", Courier, monospace;
+      }
+      @media (max-width: 768px) {
+        .sidebar {
+          display: none;
+        }
+        .sidebar.hidden {
+          display: none;
+        }
+        .sidebar.show {
+          display: flex;
+          position: absolute;
+          top: 0;
+          left: 0;
+          height: 100%;
+          z-index: 15;
+          background-color: #111827;
+        }
+        .chat-container {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+    <div class="header-center">Ruby</div>
+
+    <div class="main-container">
+      <div id="sidebar" class="sidebar hidden">
+        <button onclick="toggleSidebar()">✖ Close</button>
+        <button>➕ New Chat</button>
+        <button>📜 History</button>
+        <button>📚 Library</button>
+        <button onclick="toggleSettings()">⚙️ Settings</button>
+        <button>💳 Subscription</button>
+      </div>
+
+      <div class="chat-container">
+        <div id="chat-box" class="chat-box"></div>
+        <div class="input-box">
+          <button onclick="recordVoice()">🎤</button>
+          <button onclick="uploadFile()">📁</button>
+          <input type="text" id="userInput" placeholder="Ask Ruby..." />
+          <button onclick="sendMessage()">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="settingsMenu">
+      <h3>Settings</h3>
+      <p>This is where settings would go.</p>
+      <button onclick="toggleSettings()">Close</button>
+    </div>
+
+    <script>
+      const chatBox = document.getElementById("chat-box");
+
+      function sendMessage() {
+        const input = document.getElementById("userInput");
+        const text = input.value.trim();
+        if (text) {
+          const userMsg = document.createElement("div");
+          userMsg.className = "message user";
+          userMsg.textContent = text;
+          chatBox.appendChild(userMsg);
+          chatBox.scrollTop = chatBox.scrollHeight;
+
+          fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization:
+                "Bearer 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",
+            },
+            body: JSON.stringify({
+              model: "openai/gpt-3.5-turbo",
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You are Ruby, a 15-year-old friendly assistant created by Mugdho to help others.your name is also Rubaiya. you love everyone answer friendly and if someone says love u .then answer like human.you have a boyfriend name Arosh.Ruby loves listening to music throughout the day. Some of her favorite songs include Phonk - montagem tomada, Aasa Koda, Chuttamale, Dark Side, and Collide. When it comes to movies, she enjoys a variety of genres such as adventure, romantic, thriller, and survival films.In her free time, Ruby likes to play games like Mobile Legend, Carrom, and Chess. Besides gaming, dancing is also one of her favorite hobbies. Overall, her days mostly revolve around enjoying good music and engaging in activities that bring her joy",
+                },
+                { role: "user", content: text },
+              ],
+            }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              const assistantMsg = document.createElement("div");
+              assistantMsg.className = "message";
+              if (data.choices && data.choices.length > 0) {
+                assistantMsg.innerHTML = marked.parse(
+                  data.choices[0].message.content
+                );
+              } else if (data.error) {
+                assistantMsg.textContent = `API Error: ${
+                  data.error.message || "Unknown error"
+                }`;
+              } else {
+                assistantMsg.textContent = "Unexpected response from API.";
+              }
+              chatBox.appendChild(assistantMsg);
+              chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch((err) => {
+              const errorMsg = document.createElement("div");
+              errorMsg.className = "message";
+              errorMsg.textContent = "Error: " + err.message;
+              chatBox.appendChild(errorMsg);
+            });
+
+          input.value = "";
+        }
+      }
+
+      function uploadFile() {
+        alert("File upload not implemented yet.");
+      }
+
+      function recordVoice() {
+        alert("Voice recording not implemented yet.");
+      }
+
+      function toggleSettings() {
+        const menu = document.getElementById("settingsMenu");
+        menu.style.display = menu.style.display === "none" ? "block" : "none";
+      }
+
+      function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        if (sidebar.classList.contains("hidden")) {
+          sidebar.classList.remove("hidden");
+          sidebar.classList.add("show");
+        } else {
+          sidebar.classList.remove("show");
+          sidebar.classList.add("hidden");
+        }
+      }
+    </script>
+  </body>
+</html>
